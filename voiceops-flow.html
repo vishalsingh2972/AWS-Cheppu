@@ -1,0 +1,383 @@
+<title>VoiceOps AI — Architecture Flow</title>
+<style>
+  :root {
+    --ink:      #0A1120;
+    --ink-2:    #0E1626;
+    --panel:    #131d2e;
+    --panel-2:  #182438;
+    --line:     rgba(255,255,255,0.09);
+    --text:     #E9EEF7;
+    --muted:    #8A97AB;
+    --faint:    #5A6679;
+    --cool:     #45D0C6;
+    --cool-2:   #38BDF8;
+    --warm:     #FF9F45;
+    --warm-2:   #FF6B4A;
+    --warn:     #F0653F;
+    --ok:       #34D399;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    color: var(--text);
+    background:
+      radial-gradient(70% 45% at 15% -5%, rgba(69,208,198,0.14), transparent 60%),
+      radial-gradient(65% 45% at 90% 105%, rgba(255,122,74,0.14), transparent 60%),
+      var(--ink);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+    padding: 40px 20px 48px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .sheet {
+    width: 100%;
+    max-width: 900px;
+  }
+
+  /* ── Masthead ─────────────────────────────── */
+  .masthead { text-align: center; margin-bottom: 44px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--cool);
+    margin-bottom: 18px;
+  }
+  h1 {
+    font-size: clamp(42px, 9vw, 68px);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 0.98;
+    text-wrap: balance;
+    background: linear-gradient(96deg, var(--cool) 0%, #BFE9F5 34%, #FFE0C4 62%, var(--warm) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .tagline {
+    margin-top: 18px;
+    font-size: clamp(16px, 2.4vw, 20px);
+    color: var(--muted);
+    max-width: 34ch;
+    margin-left: auto;
+    margin-right: auto;
+    text-wrap: balance;
+  }
+  .tagline b { color: var(--text); font-weight: 600; }
+
+  /* ── Pipeline ─────────────────────────────── */
+  .pipeline { position: relative; }
+  .spine {
+    position: absolute;
+    left: 31px;
+    top: 12px;
+    bottom: 12px;
+    width: 2px;
+    background: linear-gradient(180deg, var(--cool) 0%, var(--cool-2) 30%, #9aa6bd 50%, var(--warm) 74%, var(--warm-2) 100%);
+    border-radius: 2px;
+    opacity: 0.55;
+  }
+  .spine::after {
+    content: "";
+    position: absolute;
+    left: -3px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 12px 3px rgba(255,255,255,0.7);
+    animation: flow 5.5s cubic-bezier(0.6,0,0.4,1) infinite;
+  }
+  @keyframes flow {
+    0%   { top: 0%;   opacity: 0; }
+    8%   { opacity: 1; }
+    92%  { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+
+  .stage {
+    position: relative;
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    align-items: start;
+    gap: 20px;
+    padding-bottom: 22px;
+  }
+  .stage:last-child { padding-bottom: 0; }
+
+  .marker {
+    position: relative;
+    z-index: 2;
+    width: 64px; height: 64px;
+    border-radius: 16px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--stage, var(--cool));
+    box-shadow: 0 8px 22px rgba(0,0,0,0.35);
+  }
+  .marker svg { width: 27px; height: 27px; }
+  .stage-num {
+    position: absolute;
+    top: -7px; right: -7px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--ink);
+    background: var(--stage, var(--cool));
+    border-radius: 7px;
+    padding: 2px 5px;
+    letter-spacing: 0.02em;
+  }
+
+  .card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.012));
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 18px 20px;
+  }
+  .card h2 {
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    margin-bottom: 6px;
+    text-wrap: balance;
+  }
+  .card p { font-size: 14.5px; color: var(--muted); text-wrap: pretty; }
+
+  .tag {
+    display: inline-block;
+    margin-top: 12px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.02em;
+    color: var(--stage, var(--cool));
+    background: color-mix(in srgb, var(--stage, var(--cool)) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--stage, var(--cool)) 34%, transparent);
+    border-radius: 100px;
+    padding: 4px 11px;
+  }
+
+  /* Hero stage — the agent */
+  .stage.hero .marker {
+    width: 64px; height: 64px;
+    background: linear-gradient(150deg, rgba(69,208,198,0.22), rgba(255,159,69,0.22));
+    border-color: rgba(255,255,255,0.22);
+    color: #fff;
+  }
+  .stage.hero .marker::before {
+    content: "";
+    position: absolute;
+    inset: -5px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.25);
+    animation: ring 3.2s ease-in-out infinite;
+  }
+  @keyframes ring {
+    0%, 100% { opacity: 0.15; transform: scale(1); }
+    50%      { opacity: 0.6;  transform: scale(1.08); }
+  }
+  .stage.hero .card {
+    background: linear-gradient(150deg, rgba(69,208,198,0.10), rgba(255,159,69,0.08));
+    border-color: rgba(255,255,255,0.16);
+  }
+  .stage.hero .card h2 { font-size: 21px; }
+
+  /* Service chips inside execute */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 14px;
+  }
+  .chip {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--text);
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 5px 9px;
+    white-space: nowrap;
+  }
+  .chip.audit { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+
+  .guardrail {
+    display: flex;
+    gap: 11px;
+    align-items: flex-start;
+    margin-top: 14px;
+    padding: 11px 13px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--warn) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--warn) 32%, transparent);
+  }
+  .guardrail svg { width: 18px; height: 18px; color: var(--warn); flex-shrink: 0; margin-top: 1px; }
+  .guardrail p { font-size: 13px; color: #F4C4B4; }
+  .guardrail b { color: #fff; font-weight: 600; }
+
+  /* ── Footer ───────────────────────────────── */
+  .footer {
+    margin-top: 40px;
+    padding-top: 26px;
+    border-top: 1px solid var(--line);
+    text-align: center;
+  }
+  .footer .eyebrow { color: var(--faint); margin-bottom: 14px; }
+  .stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+  .stack .chip { color: var(--muted); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spine::after, .stage.hero .marker::before { animation: none; }
+    .spine::after { display: none; }
+  }
+
+  @media (max-width: 560px) {
+    .stage { grid-template-columns: 52px 1fr; gap: 14px; }
+    .spine { left: 25px; }
+    .marker { width: 52px; height: 52px; border-radius: 14px; }
+    .marker svg { width: 23px; height: 23px; }
+  }
+</style>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <div class="eyebrow">Voice-driven · Agentic CloudOps</div>
+    <h1>VoiceOps AI</h1>
+    <p class="tagline">Talk to your AWS account — in Tamil, English, or a mix — and <b>the agent does the rest.</b></p>
+  </header>
+
+  <div class="pipeline">
+    <div class="spine"></div>
+
+    <!-- 01 SPEAK -->
+    <section class="stage" style="--stage: var(--cool)">
+      <div class="marker">
+        <span class="stage-num">01</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/><path d="M8 21h8"/>
+        </svg>
+      </div>
+      <div class="card">
+        <h2>You speak — Tamil, English, or a mix</h2>
+        <p>From the browser or right inside VS Code. No commands to memorize, no console to click through.</p>
+        <span class="tag">Web UI · VS Code extension</span>
+      </div>
+    </section>
+
+    <!-- 02 TRANSCRIBE -->
+    <section class="stage" style="--stage: var(--cool-2)">
+      <div class="marker">
+        <span class="stage-num">02</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.6 2.7 2.6 14.3 0 17c-2.6-2.7-2.6-14.3 0-17Z"/>
+        </svg>
+      </div>
+      <div class="card">
+        <h2>Speech becomes text — translated to English</h2>
+        <p>Multilingual voice is transcribed and translated in a single step, so mixed Tamil-English commands still resolve cleanly.</p>
+        <span class="tag">Sarvam AI · speech-to-text-translate</span>
+      </div>
+    </section>
+
+    <!-- 03 REASON (hero) -->
+    <section class="stage hero" style="--stage: var(--cool)">
+      <div class="marker">
+        <span class="stage-num">03</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="6.5" y="6.5" width="11" height="11" rx="2.5"/><rect x="10" y="10" width="4" height="4" rx="1"/>
+          <path d="M9 3v3.5M15 3v3.5M9 17.5V21M15 17.5V21M3 9h3.5M3 15h3.5M17.5 9H21M17.5 15H21"/>
+        </svg>
+      </div>
+      <div class="card">
+        <h2>The agent understands intent &amp; plans the work</h2>
+        <p>Claude interprets what you meant, decides which AWS operations to run, chains multiple calls when needed, and pauses for confirmation before anything destructive.</p>
+        <span class="tag">Claude · Amazon Bedrock · tool-use loop</span>
+      </div>
+    </section>
+
+    <!-- 04 EXECUTE -->
+    <section class="stage" style="--stage: var(--warm)">
+      <div class="marker">
+        <span class="stage-num">04</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3 3 7.5l9 4.5 9-4.5L12 3Z"/><path d="M3 12.5 12 17l9-4.5"/><path d="M3 16.8 12 21.3l9-4.5"/>
+        </svg>
+      </div>
+      <div class="card">
+        <h2>It calls real AWS APIs</h2>
+        <p>The agent invokes the right tools through boto3 — provisioning, inspecting, and cleaning up live infrastructure across the account.</p>
+        <div class="chips">
+          <span class="chip">EC2</span><span class="chip">EBS</span>
+          <span class="chip">VPC + Subnet + IGW</span><span class="chip">Security Groups</span>
+          <span class="chip">ECR</span><span class="chip">S3</span>
+          <span class="chip">IAM</span><span class="chip">RDS</span>
+          <span class="chip">Cost Explorer</span><span class="chip audit">Security Audit</span>
+        </div>
+        <div class="guardrail">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+          </svg>
+          <p><b>Guardrails.</b> Destructive actions — stop an instance, close a port, delete a VPC — wait for a spoken “yes” before they run.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 AWS -->
+    <section class="stage" style="--stage: var(--warm-2)">
+      <div class="marker">
+        <span class="stage-num">05</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7.5 18.5a4.2 4.2 0 0 1-.5-8.37A5.6 5.6 0 0 1 17.5 9.6a3.6 3.6 0 0 1-.5 8.9H7.5Z"/>
+        </svg>
+      </div>
+      <div class="card">
+        <h2>Your infrastructure changes for real</h2>
+        <p>Ports close, VPCs come up, repositories get created, idle spend and security risks surface — in your actual AWS account.</p>
+        <span class="tag">live AWS account</span>
+      </div>
+    </section>
+
+    <!-- 06 RESPOND -->
+    <section class="stage" style="--stage: var(--cool)">
+      <div class="marker">
+        <span class="stage-num">06</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 9.5v5h3.5L13 19V5L7.5 9.5H4Z"/><path d="M16.5 8.8a4 4 0 0 1 0 6.4M19 6.2a7.5 7.5 0 0 1 0 11.6"/>
+        </svg>
+      </div>
+      <div class="card">
+        <h2>You hear and see the result</h2>
+        <p>Replies stream into the chat in real time and are spoken back aloud — so it feels like a conversation, not a form submission.</p>
+        <span class="tag">SSE streaming · Amazon Polly</span>
+      </div>
+    </section>
+  </div>
+
+  <footer class="footer">
+    <div class="eyebrow">Under the hood</div>
+    <div class="stack">
+      <span class="chip">FastAPI</span>
+      <span class="chip">boto3</span>
+      <span class="chip">Amazon Bedrock — Claude</span>
+      <span class="chip">Sarvam AI</span>
+      <span class="chip">Amazon Polly</span>
+      <span class="chip">Docker</span>
+    </div>
+  </footer>
+
+</div>

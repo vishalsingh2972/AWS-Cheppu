@@ -1,0 +1,6 @@
+.env
+backend/.env
+node_modules/
+frontend/vscode-extension/out/
+.claude/settings.local.json
+.claude/scheduled_tasks.lock

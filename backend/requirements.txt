@@ -1,0 +1,18 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+boto3==1.35.0
+botocore==1.35.0
+python-multipart==0.0.9
+pydantic==2.8.2
+
+# Optional: for OpenAI Whisper transcription backend
+openai==1.40.0
+
+# Gemini Live agent + transcription
+google-genai>=1.0.0
+
+# Bedrock / debug endpoint
+anthropic>=0.25.0
+
+# Sarvam AI speech-to-text-translate (Tamil → English)
+httpx>=0.27.0

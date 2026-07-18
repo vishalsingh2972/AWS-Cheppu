@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Cheppu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void:    #05040A;
+  --pit:     #0C0A14;
+  --well:    #130F1C;
+  --rim:     rgba(248,112,18,0.13);
+  --fire:    #F87012;
+  --cinder:  #B85510;
+  --ash:     #3F2D1C;
+  --fog:     #7A6250;
+  --chalk:   #EDE5D4;
+  --dim:     #5A4838;
+  --good:    #10B981;
+  --bad:     #EF4444;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--void);
+  color: var(--chalk);
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  overflow: hidden;
+}
+
+/* Grid background */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(248,112,18,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(248,112,18,0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Scanlines */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0,0,0,0.012) 3px,
+    rgba(0,0,0,0.012) 4px
+  );
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* ── HEADER ──────────────────────────────────────────────────────── */
+.hdr {
+  position: fixed;
+  top: 0; left: 0; right: 0; height: 48px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 22px;
+  background: rgba(5,4,10,0.88);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--rim);
+  z-index: 20;
+}
+
+.logo {
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--chalk);
+}
+.logo b { color: var(--fire); font-weight: 700; }
+
+.hdr-right { display: flex; align-items: center; gap: 18px; }
+
+.vtoggle {
+  display: flex; align-items: center; gap: 7px;
+  cursor: pointer; user-select: none;
+  font-size: 11px; letter-spacing: 0.05em; color: var(--fog);
+}
+.vtrack {
+  width: 28px; height: 15px; border-radius: 8px;
+  background: var(--ash); position: relative;
+  transition: background 0.2s;
+}
+.vtrack.on { background: var(--fire); }
+.vknob {
+  position: absolute; width: 9px; height: 9px;
+  border-radius: 50%; background: var(--chalk);
+  top: 3px; left: 3px; transition: transform 0.2s;
+}
+.vtrack.on .vknob { transform: translateX(13px); }
+
+.status {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: 0.04em; color: var(--fog);
+}
+.sdot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--ash); transition: background 0.3s, box-shadow 0.3s;
+}
+.sdot.live { background: var(--good); box-shadow: 0 0 6px var(--good); }
+
+/* ── LAYOUT ──────────────────────────────────────────────────────── */
+.layout {
+  display: flex; flex-direction: column;
+  height: 100vh;
+  padding-top: 48px;
+  padding-bottom: 58px;
+  position: relative; z-index: 1;
+}
+
+/* ── MIC HERO ────────────────────────────────────────────────────── */
+.mic-hero {
+  flex-shrink: 0;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 16px 0 8px;
+  position: relative;
+}
+
+/* radial glow behind canvas */
+.mic-hero::before {
+  content: '';
+  position: absolute;
+  width: 320px; height: 320px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(248,112,18,0.07) 0%, transparent 68%);
+  pointer-events: none;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+}
+
+.canvas-wrap {
+  position: relative;
+  width: 200px; height: 200px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+#waveCanvas {
+  position: absolute; inset: 0;
+  width: 200px; height: 200px;
+}
+
+.mic-orb {
+  position: relative; z-index: 2;
+  width: 68px; height: 68px; border-radius: 50%;
+  border: none; cursor: pointer;
+  background: radial-gradient(circle at 36% 30%, #fd9644, #c05a10 60%, #6e2800);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; line-height: 1;
+  box-shadow:
+    0 0 0 1px rgba(248,112,18,0.3),
+    0 0 22px rgba(248,112,18,0.18),
+    inset 0 1px 0 rgba(255,200,120,0.12);
+  transition: transform 0.13s, box-shadow 0.2s;
+}
+.mic-orb:hover {
+  transform: scale(1.07);
+  box-shadow: 0 0 0 1px rgba(248,112,18,0.5), 0 0 32px rgba(248,112,18,0.28), inset 0 1px 0 rgba(255,200,120,0.12);
+}
+.mic-orb:active { transform: scale(0.94); }
+
+.mic-lbl {
+  margin-top: 11px;
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--fog); height: 16px; transition: color 0.2s;
+}
+.mic-lbl.live { color: var(--fire); }
+
+/* ── CONVERSATION ────────────────────────────────────────────────── */
+.thread {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  padding: 10px 18px 6px;
+  display: flex; flex-direction: column;
+  gap: 8px;
+}
+
+.bubble {
+  max-width: 82%;
+  display: flex; flex-direction: column; gap: 3px;
+  animation: pop-in 0.2s ease;
+}
+.bubble.user { align-self: flex-end; align-items: flex-end; }
+.bubble.ai   { align-self: flex-start; align-items: flex-start; }
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.btext {
+  padding: 9px 13px;
+  font-size: 13.5px; line-height: 1.65;
+  white-space: pre-wrap; word-break: break-word;
+}
+.bubble.user .btext {
+  background: rgba(248,112,18,0.12);
+  border: 1px solid rgba(248,112,18,0.22);
+  border-radius: 13px; border-bottom-right-radius: 3px;
+}
+.bubble.ai .btext {
+  background: var(--pit);
+  border: 1px solid var(--rim);
+  border-left: 2px solid var(--fire);
+  border-radius: 13px; border-bottom-left-radius: 3px;
+}
+
+.cursor {
+  display: inline-block;
+  color: var(--fire);
+  animation: blink 0.8s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+.btime {
+  font-size: 10px; font-family: 'IBM Plex Mono', monospace;
+  color: var(--dim); padding: 0 3px;
+}
+
+/* typing dots */
+.typing {
+  align-self: flex-start;
+  background: var(--pit);
+  border: 1px solid var(--rim);
+  border-left: 2px solid var(--fire);
+  border-radius: 13px; border-bottom-left-radius: 3px;
+  padding: 10px 14px;
+  display: none; gap: 5px;
+  align-items: center;
+}
+.typing.show { display: flex; }
+.tdot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--fire); opacity: 0.3;
+  animation: tdot 1.3s infinite;
+}
+.tdot:nth-child(2) { animation-delay: 0.18s; }
+.tdot:nth-child(3) { animation-delay: 0.36s; }
+@keyframes tdot {
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.75); }
+  40% { opacity: 1; transform: scale(1.1); }
+}
+
+/* ── INPUT BAR ───────────────────────────────────────────────────── */
+.ibar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 58px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 14px;
+  background: rgba(5,4,10,0.92);
+  border-top: 1px solid var(--rim);
+  backdrop-filter: blur(14px);
+  z-index: 20;
+}
+
+.ifield {
+  flex: 1;
+  background: var(--pit);
+  border: 1px solid var(--rim);
+  border-radius: 8px;
+  padding: 9px 14px;
+  color: var(--chalk);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.18s;
+}
+.ifield:focus { border-color: rgba(248,112,18,0.4); }
+.ifield::placeholder { color: var(--ash); }
+
+.isend {
+  padding: 9px 18px;
+  background: var(--fire);
+  border: none; border-radius: 8px;
+  color: #fff; font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; letter-spacing: 0.02em;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.isend:hover { opacity: 0.84; }
+.isend:active { transform: scale(0.96); }
+.isend:disabled { opacity: 0.28; cursor: default; }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--ash); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="logo">Voice<b>Ops</b> AI</div>
+  <div class="hdr-right">
+    <label class="vtoggle" id="voiceToggle" title="Toggle voice reply">
+      <div class="vtrack on" id="vtrack"><div class="vknob"></div></div>
+      <span>Voice reply</span>
+    </label>
+    <div class="status">
+      <div class="sdot" id="sdot"></div>
+      <span id="stext">—</span>
+    </div>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- MIC HERO -->
+  <div class="mic-hero">
+    <div class="canvas-wrap">
+      <canvas id="waveCanvas" width="200" height="200"></canvas>
+      <button class="mic-orb" id="micOrb" aria-label="Click to speak">🎙</button>
+    </div>
+    <div class="mic-lbl" id="micLbl">Tap to speak</div>
+  </div>
+
+  <!-- CONVERSATION -->
+  <div class="thread" id="thread">
+    <div class="typing" id="typing">
+      <div class="tdot"></div><div class="tdot"></div><div class="tdot"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- INPUT BAR -->
+<div class="ibar">
+  <input class="ifield" id="ifield" type="text" placeholder="Ask about EC2, EKS, ECR, security groups, costs…" autocomplete="off">
+  <button class="isend" id="isend">Send</button>
+</div>
+
+<script>
+var BACKEND = 'http://localhost:8000';
+
+// ── State ──────────────────────────────────────────────────────────
+// idle → listening → processing → speaking → idle
+// interrupt path: speaking → [barge-in] → listening
+var uiState = 'idle';
+var voiceOn = true;
+
+// ── Elements ───────────────────────────────────────────────────────
+var micOrb  = document.getElementById('micOrb');
+var micLbl  = document.getElementById('micLbl');
+var thread  = document.getElementById('thread');
+var typing  = document.getElementById('typing');
+var ifield  = document.getElementById('ifield');
+var isend   = document.getElementById('isend');
+var sdot    = document.getElementById('sdot');
+var stext   = document.getElementById('stext');
+var vtrack  = document.getElementById('vtrack');
+var canvas  = document.getElementById('waveCanvas');
+var ctx     = canvas.getContext('2d');
+
+// ── HiDPI canvas ───────────────────────────────────────────────────
+var dpr = window.devicePixelRatio || 1;
+canvas.width  = 200 * dpr;
+canvas.height = 200 * dpr;
+canvas.style.width  = '200px';
+canvas.style.height = '200px';
+ctx.scale(dpr, dpr);
+var CW = 200, CX = 100, CY = 100;
+
+// ── Audio / VAD ────────────────────────────────────────────────────
+var analyser    = null;
+var freqBuf     = null;
+var micStream   = null;
+var vadTimer    = null;
+var VAD_THRESH  = 18; // average FFT amplitude (0-255) to trigger barge-in
+var currentAudio = null; // Polly audio element currently playing
+
+function initAudio(stream) {
+  try {
+    var ac = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = ac.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.7;
+    freqBuf = new Uint8Array(analyser.frequencyBinCount);
+    ac.createMediaStreamSource(stream).connect(analyser);
+  } catch(e) {}
+}
+
+// Request mic once, keep stream alive — no re-prompts
+function ensureMic() {
+  return new Promise(function(resolve, reject) {
+    var alive = micStream &&
+      micStream.getAudioTracks().some(function(t) { return t.readyState === 'live'; });
+    if (alive) { resolve(); return; }
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(function(stream) {
+        micStream = stream;
+        initAudio(stream);
+        resolve();
+      })
+      .catch(reject);
+  });
+}
+
+// Pre-warm mic if permission already stored in browser (avoids any prompt on first click)
+if (navigator.permissions) {
+  navigator.permissions.query({ name: 'microphone' }).then(function(status) {
+    if (status.state === 'granted') {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(function(stream) { micStream = stream; initAudio(stream); })
+        .catch(function() {});
+    }
+  }).catch(function() {});
+}
+
+// ── VAD: monitor mic during TTS, barge-in when user speaks ────────
+function startVAD() {
+  if (!analyser || !freqBuf) return;
+  stopVAD();
+  vadTimer = setInterval(function() {
+    if (uiState !== 'speaking') { stopVAD(); return; }
+    analyser.getByteFrequencyData(freqBuf);
+    var sum = 0;
+    for (var i = 0; i < freqBuf.length; i++) sum += freqBuf[i];
+    if ((sum / freqBuf.length) > VAD_THRESH) {
+      interrupt();
+    }
+  }, 80);
+}
+
+function stopVAD() {
+  if (vadTimer) { clearInterval(vadTimer); vadTimer = null; }
+}
+
+// Play Polly audio (no browser TTS fallback)
+function playAudio(url) {
+  if (currentAudio) { currentAudio.pause(); currentAudio.src = ''; currentAudio = null; }
+  var a = new Audio(url);
+  currentAudio = a;
+  a.onplay  = function() { setState('speaking'); startVAD(); };
+  a.onended = function() { stopVAD(); currentAudio = null; setState('idle'); };
+  a.onerror = function() { stopVAD(); currentAudio = null; setState('idle'); };
+  a.play().catch(function() { currentAudio = null; setState('idle'); });
+}
+
+// Cancel TTS and start listening (barge-in or manual click)
+function interrupt() {
+  stopVAD();
+  if (currentAudio) { currentAudio.pause(); currentAudio.src = ''; currentAudio = null; }
+  setState('idle');
+  // Brief pause so synthesis truly stops before recognition starts
+  setTimeout(startListening, 180);
+}
+
+// ── Waveform draw loop ─────────────────────────────────────────────
+var wPhase = 0;
+
+function drawWave() {
+  requestAnimationFrame(drawWave);
+  ctx.clearRect(0, 0, CW, CW);
+
+  // Pull real FFT when listening
+  if (analyser && freqBuf && (uiState === 'listening')) {
+    analyser.getByteFrequencyData(freqBuf);
+  }
+
+  var t = Date.now() / 1000, N = 96, rIn = 48;
+  wPhase += uiState === 'processing' ? 0.022 : 0.003;
+
+  for (var i = 0; i < N; i++) {
+    var angle = (i / N) * Math.PI * 2 - Math.PI / 2 + wPhase;
+    var amp;
+    if (uiState === 'listening' && freqBuf) {
+      amp = (freqBuf[Math.floor(i * freqBuf.length / N)] || 0) / 255;
+    } else if (uiState === 'processing') {
+      amp = 0.10 + 0.08 * Math.sin(t * 3.5 + i * 0.26);
+    } else if (uiState === 'speaking') {
+      amp = 0.18 + 0.14 * Math.abs(Math.sin(t * 4.2 + i * 0.21));
+    } else {
+      amp = 0.04 + 0.025 * Math.sin(t * 0.5 + i * 0.13);
+    }
+
+    var barLen = 2.5 + amp * 42;
+    var x1 = CX + Math.cos(angle) * rIn,         y1 = CY + Math.sin(angle) * rIn;
+    var x2 = CX + Math.cos(angle) * (rIn+barLen), y2 = CY + Math.sin(angle) * (rIn+barLen);
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+    ctx.strokeStyle = 'hsla(22,' + (82+amp*10) + '%,' + (48+amp*18) + '%,' + (0.15+amp*0.85) + ')';
+    ctx.lineWidth   = uiState === 'listening' ? 2 : 1.5;
+    ctx.lineCap     = 'round';
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.arc(CX, CY, rIn - 0.5, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(248,112,18,0.07)';
+  ctx.lineWidth = 1; ctx.stroke();
+}
+drawWave();
+
+// ── MediaRecorder-based recording → Sarvam backend ────────────────
+var mediaRecorder = null;
+var audioChunks   = [];
+
+function startListening() {
+  ensureMic().then(function() {
+    audioChunks = [];
+    var options = MediaRecorder.isTypeSupported('audio/webm') ? { mimeType: 'audio/webm' } : {};
+    mediaRecorder = new MediaRecorder(micStream, options);
+
+    mediaRecorder.ondataavailable = function(e) {
+      if (e.data && e.data.size > 0) audioChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = function() {
+      var mimeType = mediaRecorder.mimeType || 'audio/webm';
+      var ext      = mimeType.includes('ogg') ? '.ogg' : '.webm';
+      var blob     = new Blob(audioChunks, { type: mimeType });
+      if (blob.size < 1000) { setState('idle'); return; } // too short / silence
+
+      setState('processing');
+      var fd = new FormData();
+      fd.append('file', blob, 'audio' + ext);
+
+      fetch(BACKEND + '/transcribe', { method: 'POST', body: fd })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var text = (data.text || '').trim();
+          if (text) { doChat(text); }
+          else { addBubble('ai', 'Could not hear anything — please try again.'); setState('idle'); }
+        })
+        .catch(function(err) {
+          addBubble('ai', 'Transcription error: ' + (err.message || 'unknown'));
+          setState('idle');
+        });
+    };
+
+    mediaRecorder.start();
+    setState('listening');
+  }).catch(function() {
+    addBubble('ai', 'Microphone access denied. Allow it in the address bar and try again.');
+  });
+}
+
+// ── Mic button ─────────────────────────────────────────────────────
+micOrb.addEventListener('click', function() {
+  if (uiState === 'processing') return;
+
+  // Speaking → barge-in
+  if (uiState === 'speaking') { interrupt(); return; }
+
+  // Listening → stop recording, trigger onstop → transcribe
+  if (uiState === 'listening') {
+    if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+    return;
+  }
+
+  // Idle → start recording
+  startListening();
+});
+
+// ── Text input ─────────────────────────────────────────────────────
+isend.addEventListener('click', doSend);
+ifield.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); }
+});
+
+function doSend() {
+  var msg = ifield.value.trim();
+  if (!msg || uiState === 'processing') return;
+  ifield.value = '';
+  // Interrupt TTS if speaking when user types
+  if (uiState === 'speaking') { stopVAD(); if (currentAudio) { currentAudio.pause(); currentAudio.src = ''; currentAudio = null; } }
+  setState('processing');
+  doChat(msg);
+}
+
+// ── Core chat — streaming SSE ──────────────────────────────────────
+function doChat(text) {
+  addBubble('user', text);
+  showTyping(true);
+
+  fetch(BACKEND + '/chat/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: text }),
+  })
+  .then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+
+    var reader  = r.body.getReader();
+    var decoder = new TextDecoder();
+    var buf     = '';
+    var bubble  = null; // created on first token
+    var fullText = '';
+
+    function read() {
+      return reader.read().then(function(result) {
+        if (result.done) { if (uiState !== 'speaking') setState('idle'); return; }
+        buf += decoder.decode(result.value, { stream: true });
+
+        var lines = buf.split('\n');
+        buf = lines.pop(); // keep incomplete last line
+
+        lines.forEach(function(line) {
+          line = line.trim();
+          if (!line.startsWith('data:')) return;
+          var raw = line.slice(5).trim();
+          if (!raw) return;
+          try {
+            var evt = JSON.parse(raw);
+
+            if (evt.type === 'token') {
+              if (!bubble) { showTyping(false); bubble = addStreamBubble(); }
+              fullText += evt.text;
+              updateStreamBubble(bubble, fullText);
+
+            } else if (evt.type === 'tool') {
+              if (!bubble) { showTyping(false); bubble = addStreamBubble(); }
+              updateStreamBubble(bubble, '🔧 ' + evt.name.replace(/_/g, ' ') + '…');
+              fullText = ''; // reset so tool status is replaced by real text
+
+            } else if (evt.type === 'audio') {
+              if (voiceOn) playAudio(BACKEND + evt.url);
+
+            } else if (evt.type === 'error') {
+              showTyping(false);
+              if (bubble) updateStreamBubble(bubble, 'Error: ' + evt.text);
+              else addBubble('ai', 'Error: ' + evt.text);
+              setState('idle');
+
+            } else if (evt.type === 'done') {
+              if (!bubble) { showTyping(false); addBubble('ai', fullText || 'Done.'); }
+              else finalizeStreamBubble(bubble);
+              if (!voiceOn || uiState !== 'speaking') setState('idle');
+            }
+          } catch(e) {}
+        });
+
+        return read();
+      });
+    }
+    return read();
+  })
+  .catch(function(err) {
+    showTyping(false);
+    addBubble('ai', 'Could not reach backend — ' + (err.message || 'is Docker running?'));
+    setState('idle');
+  });
+}
+
+// ── Voice toggle ───────────────────────────────────────────────────
+document.getElementById('voiceToggle').addEventListener('click', function() {
+  voiceOn = !voiceOn;
+  vtrack.className = 'vtrack' + (voiceOn ? ' on' : '');
+  if (!voiceOn) {
+    stopVAD();
+    if (currentAudio) { currentAudio.pause(); currentAudio.src = ''; currentAudio = null; }
+    setState('idle');
+  }
+});
+
+// ── UI helpers ─────────────────────────────────────────────────────
+function addBubble(role, text) {
+  var now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  var el  = document.createElement('div');
+  el.className = 'bubble ' + role;
+  el.innerHTML = '<div class="btext">' + esc(text) + '</div><div class="btime">' + now + '</div>';
+  thread.insertBefore(el, typing);
+  thread.scrollTop = thread.scrollHeight;
+}
+
+// Streaming bubble — grows as tokens arrive
+function addStreamBubble() {
+  var now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  var el = document.createElement('div');
+  el.className = 'bubble ai streaming';
+  el.innerHTML = '<div class="btext"></div><div class="btime">' + now + '</div>';
+  thread.insertBefore(el, typing);
+  thread.scrollTop = thread.scrollHeight;
+  return el;
+}
+
+function updateStreamBubble(el, text) {
+  el.querySelector('.btext').innerHTML = esc(text) + '<span class="cursor">▍</span>';
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function finalizeStreamBubble(el) {
+  var btext = el.querySelector('.btext');
+  // Remove streaming cursor, keep final text
+  btext.innerHTML = btext.innerHTML.replace('<span class="cursor">▍</span>', '');
+  el.classList.remove('streaming');
+}
+
+function showTyping(show) {
+  typing.className = 'typing' + (show ? ' show' : '');
+  if (show) thread.scrollTop = thread.scrollHeight;
+}
+
+function setState(s) {
+  uiState = s;
+  isend.disabled = (s === 'processing');
+  var icons  = { idle: '🎙', listening: '⏹', processing: '⏳', speaking: '🔊' };
+  var labels = { idle: 'Tap to speak', listening: 'Listening — tap to stop', processing: 'Thinking…', speaking: 'Speaking — tap to interrupt' };
+  micOrb.textContent = icons[s]  || '🎙';
+  micLbl.textContent = labels[s] || '';
+  micLbl.className   = 'mic-lbl' + (s !== 'idle' ? ' live' : '');
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+// ── Health check ───────────────────────────────────────────────────
+fetch(BACKEND + '/health')
+  .then(function(r) { return r.json(); })
+  .then(function() { sdot.className = 'sdot live'; stext.textContent = 'us-east-1'; })
+  .catch(function() { stext.textContent = 'offline'; });
+
+// Welcome
+addBubble('ai', 'Ready. Ask me about your AWS infrastructure — EC2, EKS, ECR, security groups, costs, and more.\n\nTap the mic or type below.');
+</script>
+</body>
+</html>
