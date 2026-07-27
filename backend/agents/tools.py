@@ -1,6 +1,7 @@
 """Tool definitions for the Claude agent + boto3 executors."""
 import json
 import logging
+import os
 import asyncio
 from datetime import datetime, timezone, timedelta
 from functools import partial
@@ -550,6 +551,27 @@ TOOLS = [
             "inputSchema": {"json": {"type": "object", "properties": {}}},
         }
     },
+    {
+        "toolSpec": {
+            "name": "call_user",
+            "description": (
+                "Call the user's phone number to deliver an important AWS alert or message. "
+                "Use this when the user asks you to call them, or when you find a critical "
+                "issue (security vulnerability, high costs, etc.) that warrants a phone call. "
+                "The user's phone number is already configured — just provide the message to speak."
+            ),
+            "inputSchema": {"json": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "The message to speak during the call. Keep it concise (2-4 sentences)."
+                    },
+                },
+                "required": ["message"],
+            }},
+        }
+    },
 ]
 
 
@@ -601,6 +623,8 @@ async def execute_tool(name: str, params: dict) -> dict:
         "create_ecr_repository":    _create_ecr_repository,
         # Security
         "security_audit":           _security_audit,
+        # Bolna phone call
+        "call_user":                _call_user,
     }
     fn = handlers.get(name)
     if not fn:
@@ -704,6 +728,30 @@ async def _stop_ec2_instances(params: dict) -> dict:
 
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, _run)
+
+
+# ─── Bolna phone call ─────────────────────────────────────────────────────────
+
+async def _call_user(params: dict) -> dict:
+    """Call the user's phone with a message using Bolna AI."""
+    from voice.bolna_caller import trigger_call
+
+    message = params.get("message", "")
+    if not message:
+        return {"success": False, "detail": "No message provided"}
+
+    # Read the saved phone number from settings file
+    phone_number = ""
+    settings_path = os.path.join(os.path.dirname(__file__), "..", "data", "settings.json")
+    try:
+        with open(settings_path) as f:
+            settings = json.load(f)
+            phone_number = settings.get("phone_number", "")
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass
+
+    result = await trigger_call(phone_number, message)
+    return result
 
 
 async def _start_ec2_instances(params: dict) -> dict:

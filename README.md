@@ -34,6 +34,10 @@ flowchart TD
         I["🎙️ TTS (Amazon Polly)"]
     end
 
+    subgraph Bolna ["📞 Bolna AI Integration"]
+        J["☎️ Phone Call API"]
+    end
+
     A --> B
     A --> C
     B & C --> D
@@ -45,6 +49,8 @@ flowchart TD
     I --> A
     B & C -- Audio --> H
     H --> D
+    D -- "call_user()" --> J
+    J -- "Rings your phone" --> A
 
 ```
 
@@ -87,6 +93,7 @@ Cloud management today remains trapped in "click-ops" or complex CLI memorizatio
 | **Cloud SDK** | Boto3 | Native integration with all AWS services. |
 | **Frontend** | VS Code Extension / React | Context-aware UI inside the editor. |
 | **Voice AI** | Polly + Transcribe/Whisper | Real-time, low-latency audio processing. |
+| **Phone Alerts** | Bolna AI (`POST /call`) | Proactive phone calls for critical AWS alerts. |
 | **Infrastructure** | Docker | Consistent environment deployment. |
 
 ---
@@ -154,6 +161,21 @@ Add the following to your IAM policy for the agent to function:
 * `bedrock:InvokeModel` (Agentic Reasoning)
 * `polly:SynthesizeSpeech` & `transcribe:StartTranscriptionJob`
 
+### Bolna AI Setup (Optional — for Phone Alerts)
+
+1. Sign up at [platform.bolna.ai](https://platform.bolna.ai)
+2. Go to **Developers** tab → **Create a new API Key** → Copy key
+3. Go to **Agents** → **Create Agent** → Set a prompt like *"You are an AWS alert system..."* → Copy Agent ID
+4. Add to your `.env` file:
+   ```bash
+   BOLNA_API_KEY=your_api_key_here
+   BOLNA_AGENT_ID=your_agent_id_here
+   ```
+5. In the web UI, type your phone number in the 📞 field and click Save
+6. Say: *"Run a security audit and call me"* — your phone will ring with results
+
+> **Mock Mode:** Without Bolna API keys, the call is simulated (logged in backend). Perfect for testing the flow.
+
 ---
 
 ## 💡 What I Learned
@@ -172,6 +194,7 @@ Building **AWS Cheppu** was a deep dive into agentic workflows.
 * [ ] **ECS/Lambda Support:** Native voice management for Serverless.
 * [ ] **Audit Logs:** Automated logging of every voice command to DynamoDB.
 * [ ] **Proactive Alerts:** "Found a spike in costs—should I investigate?"
+* [x] **📞 Bolna Phone Alerts:** "Run a security audit and call me" — agent calls your phone with results via Bolna AI.
 
 ---
 

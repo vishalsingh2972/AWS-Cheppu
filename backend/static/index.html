@@ -363,6 +363,16 @@ Try: "Show idle EC2 instances", "Create a VPC called test-net", or "Run a securi
         onkeydown="handleKey(event)"
         oninput="autoResize(this); updateSendState();"
       ></textarea>
+      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:2px;">
+        <input
+          id="phoneField"
+          type="text"
+          placeholder="+91 Phone"
+          style="width:85px;padding:5px 7px;border:1px solid #c0d8e8;border-radius:6px;font-size:11px;background:#f5faff;color:#1b2a3a;outline:none;"
+          title="Phone for Bolna call alerts"
+        >
+        <button class="btn-icon" id="phoneSave" style="font-size:11px;width:auto;padding:5px 8px;background:#e8f0fa;border-radius:6px;" title="Save phone number">📞</button>
+      </div>
       <button class="btn-icon btn-send" id="sendBtn" title="Send" onclick="sendMessage()" disabled>↑</button>
     </div>
   </div>
@@ -657,6 +667,36 @@ Try: "Show idle EC2 instances", "Create a VPC called test-net", or "Run a securi
       addMessage('system', 'System', `⚠️ Could not reach the backend: ${err.message}`);
     }
   }
+
+  // ── Phone number save/load ─────────────────────────────────────────
+  const phoneField = document.getElementById('phoneField');
+  const phoneSave  = document.getElementById('phoneSave');
+
+  // Load saved phone number on page load
+  fetch('/settings/phone')
+    .then(r => r.json())
+    .then(data => {
+      if (data.phone_number) phoneField.value = data.phone_number;
+    })
+    .catch(() => {});
+
+  phoneSave.addEventListener('click', function() {
+    const phone = phoneField.value.trim();
+    fetch('/settings/phone', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone_number: phone }),
+    })
+    .then(r => r.json())
+    .then(() => {
+      phoneSave.textContent = '✅';
+      setTimeout(() => { phoneSave.textContent = '📞'; }, 1500);
+    })
+    .catch(() => {
+      phoneSave.textContent = '❌';
+      setTimeout(() => { phoneSave.textContent = '📞'; }, 1500);
+    });
+  });
 </script>
 </body>
 </html>

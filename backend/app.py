@@ -181,6 +181,32 @@ async def stream_logs():
     )
 
 
+@app.post("/settings/phone")
+async def save_phone(req: dict):
+    """Save the user's phone number for Bolna call alerts."""
+    phone = req.get("phone_number", "").strip()
+    import json as _json
+    settings_path = os.path.join(os.path.dirname(__file__), "data", "settings.json")
+    os.makedirs(os.path.dirname(settings_path), exist_ok=True)
+    with open(settings_path, "w") as f:
+        _json.dump({"phone_number": phone}, f)
+    logger.info(f"Phone number saved: {phone}")
+    return {"status": "saved", "phone_number": phone}
+
+
+@app.get("/settings/phone")
+async def get_phone():
+    """Get the saved phone number."""
+    import json as _json
+    settings_path = os.path.join(os.path.dirname(__file__), "data", "settings.json")
+    try:
+        with open(settings_path) as f:
+            data = _json.load(f)
+            return {"phone_number": data.get("phone_number", "")}
+    except (FileNotFoundError, _json.JSONDecodeError):
+        return {"phone_number": ""}
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "AWSCheppu"}
