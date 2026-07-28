@@ -152,7 +152,7 @@ async def _transcribe_whisper(audio_bytes: bytes, filename: str) -> str:
 
 
 async def _transcribe_sarvam(audio_bytes: bytes, filename: str) -> str:
-    """Use Sarvam AI speech-to-text-translate — accepts Tamil/Indian languages, returns English."""
+    """Use Sarvam AI speech-to-text-translate — accepts Hindi/Indian languages, returns English."""
     import httpx
 
     api_key = os.environ.get("SARVAM_API_KEY", "")

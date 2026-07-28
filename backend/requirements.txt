@@ -14,5 +14,6 @@ google-genai>=1.0.0
 # Bedrock / debug endpoint
 anthropic>=0.25.0
 
-# Sarvam AI speech-to-text-translate (Tamil → English)
+# Sarvam AI speech-to-text-translate (Hindi/Indian languages → English)
+# Also used by Bolna phone call integration
 httpx>=0.27.0
